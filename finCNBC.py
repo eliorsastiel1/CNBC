@@ -4,6 +4,7 @@ import numpy as np
 from dataWrapper.yahoo_finance_api import get_distribution_among_sectors, get_performance_info
 from dataWrapper.cnbc_data_loader import get_cnbc_data
 from NER import plot_ner
+from sentiment_analysis import extract_sentiment_from_text
 
 hide_menu_style = """
         <style>
@@ -27,5 +28,7 @@ elif page == 'Data Explorer':
     article_id= st.slider('Article Index', 0,int(articles.shape[0]), 0)
     st.header(articles.loc[article_id,"Headline"])
     plot_ner(articles.loc[article_id,"Text"])
+    sentiment=extract_sentiment_from_text(articles.loc[article_id,"Text"])
+    st.dataframe(sentiment) 
     #st.write(articles.loc[article_id,"Text"])
 
