@@ -1,8 +1,11 @@
 import spacy
 import unittest 
+from spacy_streamlit import visualize_ner
+
 import en_core_web_md
 nlp = en_core_web_md.load()
 #pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.0.0/en_core_web_md-3.0.0.tar.gz
+#pip install spacy-streamlit
 def ner(text):
     """Extract named entities from a text input.
     Returns a list of a word from the text and matching entity
@@ -11,7 +14,9 @@ def ner(text):
     dict=[(X.text, X.label_) for X in doc.ents]
     return dict
 
-
+def plot_ner(text,table=False,tit=''):
+    doc=nlp(text)
+    visualize_ner(doc, labels=nlp.get_pipe("ner").labels,show_table=table,title=tit)
 
 class NerTest(unittest.TestCase): 
     # Returns True or False.  

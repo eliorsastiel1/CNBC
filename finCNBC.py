@@ -3,7 +3,8 @@ import pandas as pd
 import numpy as np
 from dataWrapper.yahoo_finance_api import get_distribution_among_sectors, get_performance_info
 from dataWrapper.cnbc_data_loader import get_cnbc_data
-#pip install spacy-streamlit
+from NER import plot_ner
+
 hide_menu_style = """
         <style>
         #MainMenu {visibility: hidden;}
@@ -13,9 +14,9 @@ hide_menu_style = """
 
 st.title('Financial recommender')
 st.sidebar.write('Navigation')
-page = st.sidebar.radio("Go To",('Market Explorer','Data Explorer','Training'))
+page = st.sidebar.radio("Go To",('ETFS Explorer','Data Explorer','Training'))
 articles=get_cnbc_data()
-if page == 'Market Explorer':
+if page == 'ETFS Explorer':
     ticker=st.text_input('ETFS Ticker', 'angl')
     perf=get_performance_info(ticker)
     chart=pd.DataFrame(perf, index=[0])
@@ -25,4 +26,6 @@ if page == 'Market Explorer':
 elif page == 'Data Explorer':
     article_id= st.slider('Article Index', 0,int(articles.shape[0]), 0)
     st.header(articles.loc[article_id,"Headline"])
-    st.write(articles.loc[article_id,"Text"])
+    plot_ner(articles.loc[article_id,"Text"])
+    #st.write(articles.loc[article_id,"Text"])
+
