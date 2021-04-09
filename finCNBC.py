@@ -5,7 +5,8 @@ from dataWrapper.yahoo_finance_api import get_distribution_among_sectors, get_pe
 from dataWrapper.cnbc_data_loader import get_cnbc_data
 from NER import plot_ner
 from sentiment_analysis import extract_sentiment_from_text
-
+from SVO import extract_svo
+from search_for_ticker import get_ticker_by_company
 hide_menu_style = """
         <style>
         #MainMenu {visibility: hidden;}
@@ -27,8 +28,23 @@ if page == 'ETFS Explorer':
 elif page == 'Data Explorer':
     article_id= st.slider('Article Index', 0,int(articles.shape[0]), 0)
     st.header(articles.loc[article_id,"Headline"])
-    plot_ner(articles.loc[article_id,"Text"])
+    st.write(articles.loc[article_id,"Publish Date"])
+    entities=plot_ner(articles.loc[article_id,"Text"])
+    orginazations=[]
+    for e in entities:
+        if(e[1]=='ORG'):
+            ticker=get_ticker_by_company(e[0])
+            if(ticker is not None):
+                orginazations.append([e[0],ticker])
+    org_df = pd.DataFrame(orginazations, columns =['Name', 'Ticker'])
+    org_df.drop_duplicates(subset ="Name",keep = "first", inplace = True)
+    st.dataframe(org_df)
     sentiment=extract_sentiment_from_text(articles.loc[article_id,"Text"])
-    st.dataframe(sentiment) 
+    subjects=[]
+    for index, row in sentiment.iterrows():
+        subject, verb, attribute = extract_svo(row['sentence'])
+        subjects.append(subject)
+    sentiment['subject']=subjects
+    st.dataframe(sentiment)
     #st.write(articles.loc[article_id,"Text"])
 

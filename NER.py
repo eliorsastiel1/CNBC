@@ -17,6 +17,8 @@ def ner(text):
 def plot_ner(text,table=False,tit=''):
     doc=nlp(text)
     visualize_ner(doc, labels=nlp.get_pipe("ner").labels,show_table=table,title=tit)
+    dict=[(X.text, X.label_) for X in doc.ents]
+    return dict
 
 class NerTest(unittest.TestCase): 
     # Returns True or False.  
