@@ -26,4 +26,5 @@ def extract_sentiment_from_text(text,labels=3):
     model_path=load_model()
     model = AutoModelForSequenceClassification.from_pretrained(model_path,num_labels=labels,cache_dir=None)
     prediction=predict(text,model)
+    print(prediction)
     return prediction

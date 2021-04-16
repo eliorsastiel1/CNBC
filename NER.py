@@ -12,10 +12,11 @@ def ner(text):
     """
     doc=nlp(text)
     dict=[(X.text, X.label_) for X in doc.ents]
-    return dict
+    return [dict,doc]
 
-def plot_ner(text,table=False,tit=''):
-    doc=nlp(text)
+def plot_ner(text,doc=None,table=False,tit=''):
+    if(doc is None):
+        doc=nlp(text)
     visualize_ner(doc, labels=nlp.get_pipe("ner").labels,show_table=table,title=tit)
     dict=[(X.text, X.label_) for X in doc.ents]
     return dict
