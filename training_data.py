@@ -265,4 +265,6 @@ df1=pd.DataFrame(tickers_data, columns=[
     'Short_Ticker','Date','Adj Close','Daily Change','Sell_Ind','Buy_Ind','Volume'])  
 #df1.to_csv('training_data.csv')
 tickers_df.to_csv('tickers_info.csv')
+df1 = df1.sort_values(by='Date', ascending=True)
+df1.reset_index(inplace=True,drop=True)
 df1.to_pickle("training_data.pkl")
