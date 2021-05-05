@@ -1,9 +1,9 @@
 import spacy
 import unittest 
 from spacy_streamlit import visualize_ner
-
-import en_core_web_md
-nlp = en_core_web_md.load()
+spacy.prefer_gpu()
+import en_core_web_sm
+nlp = en_core_web_sm.load()
 #pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.0.0/en_core_web_md-3.0.0.tar.gz
 #pip install spacy-streamlit
 def ner(text):

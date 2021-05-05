@@ -13,6 +13,8 @@ source_file_name =  os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Da
 # this function is used to add special records of stocks where trade name and legal name are not identical
 def fill_special_cases(dataset):
     modified=dataset.append({'Name' : 'Google','Ticker' : 'GOOG'} , ignore_index=True)
+    modified=modified.append({'Name' : 'SP','Ticker' : 'SP500'} , ignore_index=True)
+    modified=modified.append({'Name' : 'SP500','Ticker' : 'SP500'} , ignore_index=True)
     return modified
 
 
@@ -31,7 +33,8 @@ def load_russel3000():
                 details.append(row["Name"])
                 continue
             org=''
-            for token in ent:
+            for token in ent[0]:
+                #print(token)
                 if(token[1]=='ORG'):
                     if(org!=''):
                         org=org+'|'
