@@ -8,7 +8,7 @@ def train_test_split(df):
     test_performance=[]
     daily_mean=[]
     daily_std=[]
-    split_ix = df.index[df['Date'] == '2015-01-01'].tolist()[0]
+    split_ix = df.index[df['Date'] == '2015-01-02'].tolist()[0]#2015-01-01 is probably a Sunday so no transactions
     for day in tqdm(list(df['Date'].unique()), position = 0, leave = True):
         start_ix = df.index[df['Date'] == day].tolist()[0]
         end_ix = df.index[df['Date'] == day].tolist()[-1]
@@ -16,7 +16,7 @@ def train_test_split(df):
         df['Volume'].iloc[start_ix:end_ix].mean())
         daily_std.append(
         df['Volume'].iloc[start_ix:end_ix].std())
-    for index, row in tqdm(df.iterrows(), position = 0, leave = True,total=mdf.shape[0]):
+    for index, row in tqdm(df.iterrows(), position = 0, leave = True,total=df.shape[0]):
             j=[]                                
             if index < split_ix:
                 day_ix = list(df['Date'].unique()).index(row['Date'])
@@ -139,7 +139,7 @@ def sell(top_df,day_df,portfolio,current,indicator='NO'):
             portfolio[ticker]=0       
     return current,portfolio
 
-def train_model(train,s_sum):
+def train_model(train,sentiment_df,s_sum):
     pd.set_option('mode.chained_assignment', None)
     df = train
     profit = 0
@@ -153,9 +153,11 @@ def train_model(train,s_sum):
         for day in list(df['Date'].unique()):
             is_day = df['Date']==day
             day_df = df[is_day]
-            coefs = train_coefs(day_df,sentiment_df[['Date']==day])
+            #coefs = train_coefs(day_df,sentiment_df[['Date']==day])
+            coefs = train_coefs(day_df,sentiment_df.loc[day])
             t_coefs.append(coefs)
-            day_df = weighted_score(day_df,sentiment_df[['Date']==day],coefs)
+            #day_df = weighted_score(day_df,sentiment_df[['Date']==day],coefs)
+            day_df = weighted_score(day_df,sentiment_df.loc[day],coefs)
             top_n = round(n*len(list(day_df['Short_Ticker'])))
             top_df = day_df.nlargest(top_n, 'Weighted_Score')
             top_df['Percent'] = [
@@ -189,8 +191,10 @@ def train_coefs(train,sentiment_df):
     df= train
     sentiments = []
     for ticker in list(df['Short_Ticker'].unique()):
-        if ticker in list(sentiment_df['Short_Ticker'].unique()):
-            sentiments.append(sentiment_df.loc[sentiment_df['Ticker'] == ticker, 'Sentiment'].iloc[0])
+        if ticker in sentiment_df.index:
+        #if ticker in list(sentiment_df['Short_Ticker'].unique()):
+            #sentiments.append(sentiment_df.loc[sentiment_df['Ticker'] == ticker, 'Sentiment'].iloc[0])
+            sentiments.append(sentiment_df.loc[ticker]['Sentiment Score'])
         else:
             sentiments.append(0)
     SA = scipy.stats.pearsonr(df['Daily_Change'].notna(),sentiments.notna())[1]
@@ -232,8 +236,10 @@ def weighted_score(df,sentiment_df,coefs):
         else:
             Sell_score = B_I*row['Buy_Ind'] 
         Volume_score = nVol*row['Normalized_Volume']
-        if row['Short_Ticker'] in list(sentiment_df['Ticker'].unique()):
-            Sentiment_score = SA*sentiment_df.loc[sentiment_df['Ticker'] == ticker, 'Sentiment'].iloc[0]
+        #if row['Short_Ticker'] in list(sentiment_df['Ticker'].unique()):
+        if row['Short_Ticker'] in sentiment_df.index:
+            #Sentiment_score = SA*sentiment_df.loc[sentiment_df['Ticker'] == ticker, 'Sentiment'].iloc[0]
+            Sentiment_score = SA*sentiment_df.loc[ticker]['Sentiment Score']
         else:
             Sentiment_score = 0
         weighted_scores.append(Buy_score+Sell_score+Volume_score+Sentiment_score)           
