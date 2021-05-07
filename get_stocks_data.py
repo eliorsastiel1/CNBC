@@ -8,60 +8,60 @@ from tqdm import tqdm
 import talib
 from IPython.display import clear_output
 ###Get ETF names'
-# alphabet_list=['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
-#               'Q','R','S','T','U','V','W','X','Y','Z']
+alphabet_list=['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
+              'Q','R','S','T','U','V','W','X','Y','Z']
 headers = {
     'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36"}
-# fdf = pd.DataFrame(columns=['Short_Ticker','Name','Sector'])
-# for letter in alphabet_list:
-#     for page_num in range(1,11):
-#         try:
-#             response = requests.get(
-#                 f'https://etfdb.com/alpha/{letter}/#etfs&sort_name=symbol&sort_order=asc&page={page_num}',headers=headers)
-#         except Exception:
-#             continue
-#         soup = BeautifulSoup(response.content.decode(),features='lxml')
-#         data = []
-#         table = soup.find('table', attrs={'id':'etfs'})
-#         table_body = table.find('tbody')
-#         rows = table_body.find_all('tr')
-#         for row in rows:
-#             cols = row.find_all('td')
-#             cols = [ele.text.strip() for ele in cols]
-#             data.append([ele for ele in cols if ele]) # Get rid of empty values
-#         df = pd.DataFrame(data)   
-#         df = df.rename(columns={0: "Short_Ticker", 1: "Name",2:"Sector"})
-#         fdf = pd.concat([fdf, df[['Short_Ticker','Name','Sector']]], ignore_index=True)
+fdf = pd.DataFrame(columns=['Short_Ticker','Name','Sector'])
+for letter in alphabet_list:
+    for page_num in range(1,11):
+        try:
+            response = requests.get(
+                f'https://etfdb.com/alpha/{letter}/#etfs&sort_name=symbol&sort_order=asc&page={page_num}',headers=headers)
+        except Exception:
+            continue
+        soup = BeautifulSoup(response.content.decode(),features='lxml')
+        data = []
+        table = soup.find('table', attrs={'id':'etfs'})
+        table_body = table.find('tbody')
+        rows = table_body.find_all('tr')
+        for row in rows:
+            cols = row.find_all('td')
+            cols = [ele.text.strip() for ele in cols]
+            data.append([ele for ele in cols if ele]) # Get rid of empty values
+        df = pd.DataFrame(data)   
+        df = df.rename(columns={0: "Short_Ticker", 1: "Name",2:"Sector"})
+        fdf = pd.concat([fdf, df[['Short_Ticker','Name','Sector']]], ignore_index=True)
 # fdf.to_csv('ETF_List.csv')
-fdf= pd.read_csv('ETF_List.csv')
+# fdf= pd.read_csv('ETF_List.csv')
 ###Get NYSE stocks' names
-# fdf2 = pd.DataFrame(columns=['Short_Ticker','Name'])
-# for letter in alphabet_list:
-#         response = requests.get(
-#             f'https://eoddata.com/stocklist/NYSE/{letter}.htm',headers=headers)
-#         soup = BeautifulSoup(response.content.decode(),features='lxml')
-#         data2 = []
-#         table = soup.find('table', attrs={'class':'quotes'})
-#         rows = table.find_all('tr')
-#         for row in rows[1:]:
-#             cols = row.find_all('td')
-#             cols = [ele.text.strip() for ele in cols]
-#             data2.append([ele for ele in cols if ele]) # Get rid of empty values
-#         df2 = pd.DataFrame(data2)   
-#         df2 = df2.rename(columns={0: "Short_Ticker", 1: "Name"})
-#         fdf2 = pd.concat([fdf2, df2[['Short_Ticker','Name']]], ignore_index=True)
-# sectors=[]
-# for ticker in list(fdf2['Short_Ticker']):
-#     response = requests.get(f'https://finance.yahoo.com/quote/{ticker}/profile?p={ticker}',headers=headers)
-#     soup = BeautifulSoup(response.content.decode(),features='lxml')
-#     try:
-#         sector = soup.find('span', attrs={'class':'Fw(600)'})
-#         sectors.append(sector.text)
-#     except Exception:
-#         sectors.append(np.nan)
-# fdf2['Sector'] = sectors
+fdf2 = pd.DataFrame(columns=['Short_Ticker','Name'])
+for letter in alphabet_list:
+        response = requests.get(
+            f'https://eoddata.com/stocklist/NYSE/{letter}.htm',headers=headers)
+        soup = BeautifulSoup(response.content.decode(),features='lxml')
+        data2 = []
+        table = soup.find('table', attrs={'class':'quotes'})
+        rows = table.find_all('tr')
+        for row in rows[1:]:
+            cols = row.find_all('td')
+            cols = [ele.text.strip() for ele in cols]
+            data2.append([ele for ele in cols if ele]) # Get rid of empty values
+        df2 = pd.DataFrame(data2)   
+        df2 = df2.rename(columns={0: "Short_Ticker", 1: "Name"})
+        fdf2 = pd.concat([fdf2, df2[['Short_Ticker','Name']]], ignore_index=True)
+sectors=[]
+for ticker in list(fdf2['Short_Ticker']):
+    response = requests.get(f'https://finance.yahoo.com/quote/{ticker}/profile?p={ticker}',headers=headers)
+    soup = BeautifulSoup(response.content.decode(),features='lxml')
+    try:
+        sector = soup.find('span', attrs={'class':'Fw(600)'})
+        sectors.append(sector.text)
+    except Exception:
+        sectors.append(np.nan)
+fdf2['Sector'] = sectors
 # fdf2.to_csv('fdf2.csv')
-fdf2 = pd.read_csv('fdf2.csv')
+# fdf2 = pd.read_csv('fdf2.csv')
 ###Get NASDAQ stocks' names
 nasdaq = pd.read_csv('nasdaq.csv')
 nasdaq=nasdaq.rename(columns={'Symbol': "Short_Ticker"})
