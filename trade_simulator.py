@@ -153,7 +153,7 @@ def train_model(train,sentiment_df,s_sum):
     SA1 = np.nanmean([x[0] for x in t_coefs])
     B_I =  np.nanmean([x[1] for x in t_coefs])
     S_I =  np.nanmean([x[2] for x in t_coefs])
-    nVol1 =  np.nanmean([x[4] for x in t_coefs])
+    nVol1 =  np.nanmean([x[3] for x in t_coefs])
     f_coefs.extend([SA1,B_I,S_I,nVol1])
     
     return final_n, f_coefs
