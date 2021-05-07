@@ -18,7 +18,7 @@ def get_portfolio_value(df,portfolio):
     for ticker in list(portfolio.keys()):
         if portfolio.get(ticker)>0:
             try:
-                ticker_price = float(df.loc[df['Short_Ticker'] == ticker, 'Adj_Close'].iloc[0])
+                ticker_price = float(df.loc[df['Short_Ticker'] == ticker, 'Adj Close'].iloc[0])
             except Exception:
                 ticker_price = 0
             try:
@@ -72,7 +72,7 @@ def buy(top_df,portfolio,current):
             stocks = 0
         invest = float(top_df.loc[top_df['Short_Ticker'] == ticker,\
                                    'Percent'].iloc[0])*base
-        price = float(top_df.loc[top_df['Short_Ticker'] == ticker, 'Adj_Close'].iloc[0])*1.004
+        price = float(top_df.loc[top_df['Short_Ticker'] == ticker, 'Adj Close'].iloc[0])*1.004
         stocks += float(invest/price)
         portfolio[ticker] = stocks
         current -= invest
@@ -87,7 +87,7 @@ def sell(top_df,day_df,portfolio,current,indicator='NO'):
                 else:
                     try:
                         price = 0.996*float(day_df.loc[
-                            day_df['Short_Ticker'] == ticker,'Adj_Close'].iloc[0])
+                            day_df['Short_Ticker'] == ticker,'Adj Close'].iloc[0])
                     except Exception:
                         continue
                     sell = float(portfolio.get(ticker))*price
@@ -97,7 +97,7 @@ def sell(top_df,day_df,portfolio,current,indicator='NO'):
         for ticker in list(portfolio.keys()):
             try:
                 price = 0.996*float(day_df.loc[
-                            day_df['Short_Ticker'] == ticker,'Adj_Close'].iloc[0])
+                            day_df['Short_Ticker'] == ticker,'Adj Close'].iloc[0])
             except Exception:
                 continue
             sell = float(portfolio.get(ticker))*price                
