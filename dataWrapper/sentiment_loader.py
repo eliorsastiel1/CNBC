@@ -19,5 +19,6 @@ def get_sentiment_data():
                 sentiment.to_pickle(processed_file_name)
     else:
         sentiment=pd.read_pickle('./Processed/sentiment_weighted.pkl')
-    sentiment['Sentiment Score'] = (sentiment['Positive Avg']-sentiment['Negative Avg'])/((sentiment['Positive Avg']-sentiment['Negative Avg'])+1)
+    sentiment['Sentiment Score'] = [(x-y)/z for x,y,z in zip(sentiment['Positive Score'],sentiment['Negative Score'],sentiment['Weight'])]
+
     return sentiment
