@@ -2,7 +2,11 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 import scipy.stats
+import concurrent.futures
+pd.set_option('mode.chained_assignment', None)
+
 """Simulation Functions"""
+#Splitting stock_data to train and test dataframes
 def train_test_split(df,split_date):
     split_ix = df.index[df['Date'] == split_date].tolist()[0]
     train_corpus = df.iloc[:split_ix]
@@ -27,7 +31,8 @@ def get_portfolio_value(df,portfolio):
                 ticker_value = 0
             portfolio_value += ticker_value
     return portfolio_value
-        
+
+#Simulating trading of trained model
 def simulator(df,sentiment_df,n,coefs,s_sum):
     profit = 0
     current = s_sum
@@ -63,6 +68,7 @@ def simulator(df,sentiment_df,n,coefs,s_sum):
 
     return profits_dict
 
+#Buying function
 def buy(top_df,portfolio,current):
     base = current
     for ticker in list(top_df['Short_Ticker']):
@@ -76,8 +82,10 @@ def buy(top_df,portfolio,current):
         stocks += float(invest/price)
         portfolio[ticker] = stocks
         current -= invest
+        
     return current,portfolio
 
+#Selling function
 def sell(top_df,day_df,portfolio,current,indicator='NO'):
     if indicator == 'NO':
         for ticker in list(portfolio.keys()):
@@ -102,24 +110,20 @@ def sell(top_df,day_df,portfolio,current,indicator='NO'):
                 continue
             sell = float(portfolio.get(ticker))*price                
             current += sell
-            portfolio[ticker]=0       
+            portfolio[ticker]=0   
+            
     return current,portfolio
 
-def train_model(train,sentiment_df,s_sum):
-    pd.set_option('mode.chained_assignment', None)
-    df = train
+#Model train process (one of n)
+def train_process(train,sentiment_df,s_sum,n):
     profit = 0
-    n_list=[]
     current = s_sum
     portfolio={}
-    t_coefs=[]
     first_day = list(df['Date'].unique())[0]
     last_day = list(df['Date'].unique())[-1]
-    for n in tqdm(np.arange(0.01, 0.21, 0.01), position = 0, leave = True):
-        for day in list(df['Date'].unique()[480:]):
+    for day in list(df['Date'].unique()):
             day_df = df[df['Date']==day]
             coefs = train_coefs(day_df,sentiment_df.loc[day])
-            t_coefs.append(coefs)
             day_df = weighted_score(day_df,sentiment_df.loc[day],coefs)
             top_n = round(n*len(list(day_df['Short_Ticker'])))
             top_df = day_df.nlargest(top_n, 'Weighted_Score')
@@ -133,13 +137,27 @@ def train_model(train,sentiment_df,s_sum):
                 current,portfolio = sell(top_df,day_df,portfolio,current)
                 if current <=0:
                     profit = -100
-                    del t_coefs[-1]
-                    break
+                    return [None,None]
                 current,portfolio = buy(top_df,portfolio,current)
-        profit = 100*(current - s_sum)/s_sum
-        if profit >0:
-            n_list.append(n)
-        
+    profit = 100*(current - s_sum)/s_sum
+    if profit >0:
+        return [n, t_coefs]
+    else:
+        return [None,None]
+
+#Training function - retrieves top % and coefficients
+def train_model(train,sentiment_df,s_sum):
+    n_list=[]
+    t_coefs = []
+    with concurrent.futures.ProcessPoolExecutor(max_workers=2) as executor:
+        results = [
+            executor.submit(train_process,train,sentiment_df,x) 
+            for x in np.arange(0.01, 0.11, 0.01)]
+        for f in concurrent.futures.as_completed(results):
+            if f.result()[0] is not None:
+                n_list.append(f.result()[0])
+                t_coefs.append(f.result()[1])     
+                
     final_n = np.median(n_list)
     f_coefs = []
     SA1 = np.nanmean([x[0] for x in t_coefs])
@@ -150,51 +168,7 @@ def train_model(train,sentiment_df,s_sum):
     
     return final_n, f_coefs
 
-def train_model(train,sentiment_df,s_sum):
-    pd.set_option('mode.chained_assignment', None)
-    df = train
-    profit = 0
-    n_list=[]
-    current = s_sum
-    portfolio={}
-    t_coefs=[]
-    first_day = list(df['Date'].unique())[0]
-    last_day = list(df['Date'].unique())[-1]
-    for n in tqdm(np.arange(0.01, 0.11, 0.01), position = 0, leave = True):
-        for day in list(df['Date'].unique()):
-            day_df = df[df['Date']==day]
-            coefs = train_coefs(day_df,sentiment_df)
-            t_coefs.append(coefs)
-            day_df = weighted_score(day_df,sentiment_df,coefs)
-            top_n = round(n*len(list(day_df['Short_Ticker'])))
-            top_df = day_df.nlargest(top_n, 'Weighted_Score')
-            top_df['Percent'] = [
-                float(x/(top_df['Weighted_Score'].sum())) for x in top_df['Weighted_Score']]
-            if day == first_day:
-                current,portfolio = buy(top_df,portfolio,current)
-            elif day == last_day:
-                current,portfolio = sell(top_df,day_df,portfolio,current,'YES')
-            else:
-                current,portfolio = sell(top_df,day_df,portfolio,current)
-                if current <=0:
-                    profit = -100
-                    del t_coefs[-1]
-                    break
-                current,portfolio = buy(top_df,portfolio,current)
-        profit = 100*(current - s_sum)/s_sum
-        if profit >0:
-            n_list.append(n)
-        
-    final_n = np.median(n_list)
-    f_coefs = []
-    SA1 = np.nanmean([x[0] for x in t_coefs])
-    B_I =  np.nanmean([x[1] for x in t_coefs])
-    S_I =  np.nanmean([x[2] for x in t_coefs])
-    nVol1 =  np.nanmean([x[4] for x in t_coefs])
-    f_coefs.extend([SA1,B_I,S_I,nVol1])
-    
-    return final_n, f_coefs
-
+#Function that creates training coefficients
 def train_coefs(train,sentiment_df):
     is_sentiment = True
     try:
@@ -251,6 +225,7 @@ def train_coefs(train,sentiment_df):
         coefs.extend([SA,B_I,S_I,nVol])
     return coefs
 
+#Calculating weighted scores (according to coefficients)
 def weighted_score(df,sentiment_df,coefs):
     is_sentiment = True
     try:
