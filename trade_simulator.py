@@ -3,16 +3,8 @@ import numpy as np
 from tqdm import tqdm
 import scipy.stats
 """Simulation Functions"""
-def train_test_split(df):
-    n_vol_list = []
-    split_ix = df.index[df['Date'] == '2015-01-02'].tolist()[0]
-    for day in tqdm(list(df['Date'].unique()), position = 0, leave = True):
-        day_df = df[df['Date']==day]
-        day_df['Normalized_Volume'] = [(x-day_df['Volume'].mean())/day_df['Volume'].std()
-                                      for x in day_df['Volume']]
-        n_vol_list.extend(day_df['Normalized_Volume']) 
-    
-    df['Normalized_Volume'] = n_vol_list
+def train_test_split(df,split_date):
+    split_ix = df.index[df['Date'] == split_date].tolist()[0]
     train_corpus = df.iloc[:split_ix]
     train_corpus.reset_index(inplace=True,drop=True)
     test_corpus = df.iloc[split_ix:]
