@@ -45,9 +45,8 @@ def simulator(df,sentiment_df,n,coefs,s_sum):
     last_day = list(df['Date'].unique())[-1]
     days = list(df['Date'].unique())
     for day in tqdm(days , position = 0, leave = True):
-        is_day = df['Date']==day
-        day_df = df[is_day]
-        day_df = weighted_score(day_df,sentiment_df[['Date']==day],coefs)
+        day_df = df[df['Date']==day]
+        day_df = weighted_score(day_df,sentiment_df,coefs)
         top_n = round(n*len(list(day_df['Short_Ticker'])))
         top_df = day_df.nlargest(top_n, 'Weighted_Score')
         top_df['Percent'] = [
@@ -159,6 +158,51 @@ def train_model(train,sentiment_df,s_sum):
     
     return final_n, f_coefs
 
+def train_model(train,sentiment_df,s_sum):
+    pd.set_option('mode.chained_assignment', None)
+    df = train
+    profit = 0
+    n_list=[]
+    current = s_sum
+    portfolio={}
+    t_coefs=[]
+    first_day = list(df['Date'].unique())[0]
+    last_day = list(df['Date'].unique())[-1]
+    for n in tqdm(np.arange(0.01, 0.11, 0.01), position = 0, leave = True):
+        for day in list(df['Date'].unique()):
+            day_df = df[df['Date']==day]
+            coefs = train_coefs(day_df,sentiment_df)
+            t_coefs.append(coefs)
+            day_df = weighted_score(day_df,sentiment_df,coefs)
+            top_n = round(n*len(list(day_df['Short_Ticker'])))
+            top_df = day_df.nlargest(top_n, 'Weighted_Score')
+            top_df['Percent'] = [
+                float(x/(top_df['Weighted_Score'].sum())) for x in top_df['Weighted_Score']]
+            if day == first_day:
+                current,portfolio = buy(top_df,portfolio,current)
+            elif day == last_day:
+                current,portfolio = sell(top_df,day_df,portfolio,current,'YES')
+            else:
+                current,portfolio = sell(top_df,day_df,portfolio,current)
+                if current <=0:
+                    profit = -100
+                    del t_coefs[-1]
+                    break
+                current,portfolio = buy(top_df,portfolio,current)
+        profit = 100*(current - s_sum)/s_sum
+        if profit >0:
+            n_list.append(n)
+        
+    final_n = np.median(n_list)
+    f_coefs = []
+    SA1 = np.nanmean([x[0] for x in t_coefs])
+    B_I =  np.nanmean([x[1] for x in t_coefs])
+    S_I =  np.nanmean([x[2] for x in t_coefs])
+    nVol1 =  np.nanmean([x[4] for x in t_coefs])
+    f_coefs.extend([SA1,B_I,S_I,nVol1])
+    
+    return final_n, f_coefs
+
 def train_coefs(train,sentiment_df):
     is_sentiment = True
     try:
@@ -213,10 +257,14 @@ def train_coefs(train,sentiment_df):
         coefs.extend([0.2,0.2,0.2,0.2])
     else:
         coefs.extend([SA,B_I,S_I,nVol])
-        
     return coefs
 
 def weighted_score(df,sentiment_df,coefs):
+    is_sentiment = True
+    try:
+        sentiment_df = sentiment_df.loc[day]
+    except Exception:
+        is_sentiment = False
     SA = coefs[0]
     B_I = coefs[1]
     S_I = coefs[2]
@@ -236,10 +284,11 @@ def weighted_score(df,sentiment_df,coefs):
         else:
             Sell_score = B_I*row['Buy_Ind'] 
         Volume_score = nVol*row['Normalized_Volume']
-        #if row['Short_Ticker'] in list(sentiment_df['Ticker'].unique()):
-        if row['Short_Ticker'] in sentiment_df.index:
-            #Sentiment_score = SA*sentiment_df.loc[sentiment_df['Ticker'] == ticker, 'Sentiment'].iloc[0]
-            Sentiment_score = SA*sentiment_df.loc[ticker]['Sentiment Score']
+        if is_sentiment==True:
+            if row['Short_Ticker'] in sentiment_df.index:
+                Sentiment_score = SA*sentiment_df.loc[row['Short_Ticker']]['Sentiment Score']
+            else:
+                Sentiment_score = 0
         else:
             Sentiment_score = 0
         weighted_scores.append(Buy_score+Sell_score+Volume_score+Sentiment_score)           
