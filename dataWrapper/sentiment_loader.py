@@ -1,10 +1,11 @@
 import pandas as pd
 import os
 import pickle
-from statistics import mean
 
+from statistics import mean
+from tqdm import tqdm
 raw_file_name =  os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Data/suggestions_dict.pkl')
-processed_file_name =  os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Processed/sentiment_weighted.pickle')
+processed_file_name =  os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Processed/sentiment_weighted.pkl')
 def get_sentiment_data():
     if not os.path.isfile(processed_file_name):
         sentiment=pd.read_pickle(raw_file_name)
@@ -19,5 +20,5 @@ def get_sentiment_data():
                 sentiment.to_pickle(processed_file_name)
     else:
         sentiment=pd.read_pickle('./Processed/sentiment_weighted.pkl')
-    sentiment['Sentiment Score'] = (sentiment['Positive Avg']-sentiment['Negative Avg'])/((sentiment['Positive Avg']-sentiment['Negative Avg'])+1)
+    sentiment['Sentiment Score'] = (sentiment['Positive Score']-sentiment['Negative Score'])/(sentiment['Weight'])
     return sentiment
