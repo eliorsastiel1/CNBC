@@ -2,13 +2,38 @@ import pandas as pd
 from trade_simulator import train_test_split,train_model,simulator
 from tqdm import tqdm
 import yfinance as yf
+import os
+import pickle
 from dataWrapper.sentiment_loader import get_sentiment_data
+
+simulation_training_data =  os.path.join(os.path.dirname(__file__), 'Data/simulation_train_data.pkl')
+    
+simulator_params =  os.path.join(os.path.dirname(__file__), 'Data/simulator_params.pkl')
+
 sentiment=get_sentiment_data()
 stock_data=pd.read_pickle('./Data/training_data.pkl')
 isum=1000000
 split_date = '2015-01-02'
-train,test = train_test_split(stock_data,split_date)
-n, coefs =train_model(train,sentiment,isum)
+if not os.path.isfile(simulation_training_data):
+    train,test = train_test_split(stock_data,split_date)
+    with open(simulation_training_data, 'wb') as out_file:
+        pickle.dump(train,out_file, protocol=-1)
+        pickle.dump(test,out_file, protocol=-1)
+else:
+    with open(simulation_training_data, 'rb') as in_file: 
+            train = pickle.load(in_file)
+            test = pickle.load(in_file)  
+
+if not os.path.isfile(simulator_params):    
+    n, coefs =train_model(train,sentiment,isum)
+    with open(simulator_params, 'wb') as out_file:
+        pickle.dump(n,out_file, protocol=-1)
+        pickle.dump(coefs,out_file, protocol=-1)
+else:
+    with open(simulator_params, 'rb') as in_file: 
+        n = pickle.load(in_file)
+        coefs = pickle.load(in_file) 
+ 
 profit=simulator(stock_data,sentiment,n,coefs,isum)
 print(profit)
 
