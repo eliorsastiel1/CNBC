@@ -15,12 +15,13 @@ simulation_training_data =  os.path.join(os.path.dirname(__file__), 'Data/simula
 simulator_params =  os.path.join(os.path.dirname(__file__), 'Data/simulator_params.pkl')
 
 sentiment=get_sentiment_data()
-stock_data=pd.read_pickle('./Data/training_data.pkl')
+#stock_data=pd.read_pickle('./Data/training_data.pkl')
+train=pd.read_pickle('./Data/train.pkl')
 isum=1000000
 
-with open(simulation_training_data, 'rb') as in_file: 
-    train = pickle.load(in_file)
-    test = pickle.load(in_file)  
+#with open(simulation_training_data, 'rb') as in_file: 
+#    train = pickle.load(in_file)
+#    test = pickle.load(in_file)  
 
 n,coeff=train_process(train,sentiment,isum,0.01)
 print(n)

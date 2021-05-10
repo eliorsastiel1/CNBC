@@ -16,18 +16,18 @@ if __name__ == '__main__':
     simulator_params =  os.path.join(os.path.dirname(__file__), 'Data/simulator_params.pkl')
 
     sentiment=get_sentiment_data()
-    stock_data=pd.read_pickle('./Data/training_data.pkl')
+    train=pd.read_pickle('./Data/train.pkl')
     isum=1000000
     split_date = '2015-01-02'
-    if not os.path.isfile(simulation_training_data):
-        train,test = train_test_split(stock_data,split_date)
-        with open(simulation_training_data, 'wb') as out_file:
-            pickle.dump(train,out_file, protocol=-1)
-            pickle.dump(test,out_file, protocol=-1)
-    else:
-        with open(simulation_training_data, 'rb') as in_file: 
-                train = pickle.load(in_file)
-                test = pickle.load(in_file)  
+    #if not os.path.isfile(simulation_training_data):
+    #    train,test = train_test_split(stock_data,split_date)
+    #    with open(simulation_training_data, 'wb') as out_file:
+    #        pickle.dump(train,out_file, protocol=-1)
+    #        pickle.dump(test,out_file, protocol=-1)
+    #else:
+    #    with open(simulation_training_data, 'rb') as in_file: 
+    #            train = pickle.load(in_file)
+    #            test = pickle.load(in_file)  
 
     if not os.path.isfile(simulator_params):
         n_list=[]

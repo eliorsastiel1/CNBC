@@ -137,11 +137,11 @@ def train_process(df,sentiment_df,s_sum,n):
         #    continue
         #print(daily_sentiment)
         coefs = train_coefs(day_df,sentiment_df,day)
-        print(coefs)
-        day_df = weighted_score(day_df,daily_sentiment,day,coefs)
+        #print(coefs)
+        day_df = weighted_score(day_df,sentiment_df,day,coefs)
         top_n = round(n*len(list(day_df['Short_Ticker'])))
         top_df = day_df.nlargest(top_n, 'Weighted_Score')
-        print(top_df)
+        #print(top_df)
         top_df['Percent'] = [
             float(x/(top_df['Weighted_Score'].sum())) for x in top_df['Weighted_Score']]
         if day == first_day:
@@ -216,13 +216,8 @@ def train_coefs(train,sentiment_df,day):
                 float(train[train['Short_Ticker']==ticker]['Normalized_Volume']))==False:
                 vol_list.append(float(train[train['Short_Ticker']==ticker]['Normalized_Volume']))
                 dchange3.append(float(train[train['Short_Ticker']==ticker]['Daily Change']))
-        #Bar : sentiment_df.index is not declared if is_sentiment is false
-        if ticker in sentiment_df.index:
-            if np.isnan(
-                float(train[train['Short_Ticker']==ticker]['Daily Change']))==False and np.isnan(
-                sentiment_df.loc[ticker]['Sentiment Score'])==False:
-                    sentiments.append(sentiment_df.loc[ticker]['Sentiment Score'])
-                    dchange1.append(float(train[train['Short_Ticker']==ticker]['Daily Change']))
+    if not dchange1 and not dchange2 and not dchange3:
+        return [0.25,0.25,0.25,0.25]   
     if is_sentiment == True:
         SA = scipy.stats.pearsonr(dchange1,sentiments)[1]
     else:
@@ -244,6 +239,8 @@ def train_coefs(train,sentiment_df,day):
         coefs.extend([SA,B_I,S_I,nVol])
     return coefs
 
+
+
 #Calculating weighted scores (according to coefficients)
 def weighted_score(df,sentiment_df,day,coefs):
     is_sentiment = True
@@ -257,6 +254,7 @@ def weighted_score(df,sentiment_df,day,coefs):
     nVol = coefs[3]
     weighted_scores = []
     for index,row in df.iterrows():
+        print(row)
         Buy_score = 0
         Sell_score = 0
         Sentiment_score = 0
