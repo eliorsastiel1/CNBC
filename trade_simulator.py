@@ -3,6 +3,7 @@ import numpy as np
 from tqdm import tqdm
 import scipy.stats
 import concurrent.futures
+import multiprocessing
 pd.set_option('mode.chained_assignment', None)
 
 """Simulation Functions"""
@@ -115,30 +116,44 @@ def sell(top_df,day_df,portfolio,current,indicator='NO'):
     return current,portfolio
 
 #Model train process (one of n)
-def train_process(train,sentiment_df,s_sum,n):
+#Bar : what is s_sum and what is n? I've seen that you were not sending one of the parameters and n is set to be 0.01 to 0.11
+def train_process(df,sentiment_df,s_sum,n):
     profit = 0
     current = s_sum
     portfolio={}
-    first_day = list(df['Date'].unique())[0]
-    last_day = list(df['Date'].unique())[-1]
-    for day in list(df['Date'].unique()):
-            day_df = df[df['Date']==day]
-            coefs = train_coefs(day_df,sentiment_df.loc[day])
-            day_df = weighted_score(day_df,sentiment_df.loc[day],coefs)
-            top_n = round(n*len(list(day_df['Short_Ticker'])))
-            top_df = day_df.nlargest(top_n, 'Weighted_Score')
-            top_df['Percent'] = [
-                float(x/(top_df['Weighted_Score'].sum())) for x in top_df['Weighted_Score']]
-            if day == first_day:
-                current,portfolio = buy(top_df,portfolio,current)
-            elif day == last_day:
-                current,portfolio = sell(top_df,day_df,portfolio,current,'YES')
-            else:
-                current,portfolio = sell(top_df,day_df,portfolio,current)
-                if current <=0:
-                    profit = -100
-                    return [None,None]
-                current,portfolio = buy(top_df,portfolio,current)
+    days=list(df['Date'].unique())
+    first_day =sentiment_df.index[0][0]
+    last_day=sentiment_df.index[-1][0]
+    #dt_dates = [datetime.strptime(date, '%Y-%m-%d') for date in days]
+    #print(last_day)
+    #first_day = list(df['Date'].unique())[0]
+    #last_day = list(df['Date'].unique())[-1]
+    #for day in list(df['Date'].unique()):
+    for day in days:
+        day_df = df[df['Date']==day]
+        #try:
+        #    daily_sentiment=sentiment_df.loc[day] 
+        #except:
+        #    continue
+        #print(daily_sentiment)
+        coefs = train_coefs(day_df,sentiment_df,day)
+        print(coefs)
+        day_df = weighted_score(day_df,daily_sentiment,day,coefs)
+        top_n = round(n*len(list(day_df['Short_Ticker'])))
+        top_df = day_df.nlargest(top_n, 'Weighted_Score')
+        print(top_df)
+        top_df['Percent'] = [
+            float(x/(top_df['Weighted_Score'].sum())) for x in top_df['Weighted_Score']]
+        if day == first_day:
+            current,portfolio = buy(top_df,portfolio,current)
+        elif day == last_day:
+            current,portfolio = sell(top_df,day_df,portfolio,current,'YES')
+        else:
+            current,portfolio = sell(top_df,day_df,portfolio,current)
+            if current <=0:
+                profit = -100
+                return [None,None]
+            current,portfolio = buy(top_df,portfolio,current)
     profit = 100*(current - s_sum)/s_sum
     if profit >0:
         return [n, t_coefs]
@@ -149,27 +164,30 @@ def train_process(train,sentiment_df,s_sum,n):
 def train_model(train,sentiment_df,s_sum):
     n_list=[]
     t_coefs = []
-    with concurrent.futures.ProcessPoolExecutor(max_workers=2) as executor:
-        results = [
-            executor.submit(train_process,train,sentiment_df,x) 
-            for x in np.arange(0.01, 0.11, 0.01)]
-        for f in concurrent.futures.as_completed(results):
-            if f.result()[0] is not None:
-                n_list.append(f.result()[0])
-                t_coefs.append(f.result()[1])     
+    num_processes = multiprocessing.cpu_count()-2
+    #num_processes = 4
+    if __name__ == '__main__':
+        with concurrent.futures.ProcessPoolExecutor(max_workers=num_processes) as executor:
+
+        #results = list(tqdm(executor.map(train_process, train), total=len(my_iter)))
+
+            futures = [executor.submit(train_process,train,sentiment_df,x) for x in np.arange(0.01, 0.11, 0.01)]
+            for future in tqdm(concurrent.futures.as_completed(futures),total=len(futures)):
+                if future.result()[0] is not None:
+                    n_list.append(f.result()[0])
+                    t_coefs.append(f.result()[1])     
                 
-    final_n = np.median(n_list)
-    f_coefs = []
-    SA1 = np.nanmean([x[0] for x in t_coefs])
-    B_I =  np.nanmean([x[1] for x in t_coefs])
-    S_I =  np.nanmean([x[2] for x in t_coefs])
-    nVol1 =  np.nanmean([x[3] for x in t_coefs])
-    f_coefs.extend([SA1,B_I,S_I,nVol1])
-    
-    return final_n, f_coefs
+        final_n = np.median(n_list)
+        f_coefs = []
+        SA1 = np.nanmean([x[0] for x in t_coefs])
+        B_I =  np.nanmean([x[1] for x in t_coefs])
+        S_I =  np.nanmean([x[2] for x in t_coefs])
+        nVol1 =  np.nanmean([x[3] for x in t_coefs])
+        f_coefs.extend([SA1,B_I,S_I,nVol1])
+        return final_n, f_coefs
 
 #Function that creates training coefficients
-def train_coefs(train,sentiment_df):
+def train_coefs(train,sentiment_df,day):
     is_sentiment = True
     try:
         sentiment_df = sentiment_df.loc[day]
@@ -198,6 +216,7 @@ def train_coefs(train,sentiment_df):
                 float(train[train['Short_Ticker']==ticker]['Normalized_Volume']))==False:
                 vol_list.append(float(train[train['Short_Ticker']==ticker]['Normalized_Volume']))
                 dchange3.append(float(train[train['Short_Ticker']==ticker]['Daily Change']))
+        #Bar : sentiment_df.index is not declared if is_sentiment is false
         if ticker in sentiment_df.index:
             if np.isnan(
                 float(train[train['Short_Ticker']==ticker]['Daily Change']))==False and np.isnan(
@@ -226,7 +245,7 @@ def train_coefs(train,sentiment_df):
     return coefs
 
 #Calculating weighted scores (according to coefficients)
-def weighted_score(df,sentiment_df,coefs):
+def weighted_score(df,sentiment_df,day,coefs):
     is_sentiment = True
     try:
         sentiment_df = sentiment_df.loc[day]
