@@ -254,7 +254,7 @@ def weighted_score(df,sentiment_df,day,coefs):
     nVol = coefs[3]
     weighted_scores = []
     for index,row in df.iterrows():
-        print(row)
+        #print(row)
         Buy_score = 0
         Sell_score = 0
         Sentiment_score = 0
