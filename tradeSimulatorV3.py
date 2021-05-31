@@ -42,7 +42,7 @@ def simulator(df,sentiment_df,n,k,coefs,s_sum):
     first_day = list(df['Date'].unique())[0]
     last_day = list(df['Date'].unique())[-1]
     days = list(df['Date'].unique())
-    for day in tqdm(days , position = 0, leave = True):
+    for day in days:
         day_df = df[df['Date']==day]
         coefs = train_coefs(day_df)
         day_df = weighted_score(day_df,sentiment_df,day,coefs)
@@ -135,24 +135,23 @@ def sell(bottom_df,day_df,portfolio,current,doubt_list,indicator='NO'):
 
 #Model train process (one of n, one of k)
 def train_process(df,sentiment_df,s_sum,n,k):
-    print('start training with {} and {}'.format(n,k))
     profit = 0
     current = s_sum
     portfolio={}
     days=list(df['Date'].unique())
-    #print(days)
     first_day =sentiment_df.index[0][0]
     last_day=sentiment_df.index[-1][0]
     for day in days:
         day_df = df[df['Date']==day]
         coefs = train_coefs(day_df)
-        print(day)
-        print(current)
+        #print(coefs)
         day_df = weighted_score(day_df,sentiment_df,day,coefs)
-        top_n = round(n*len(list(day_df['Short_Ticker'])))
-        bottom_k = round(k*len(list(day_df['Short_Ticker'])))
-        top_df = day_df.nlargest(top_n, 'Buy_Score')
-        bottom_df = day_df.nlargest(bottom_k, 'Sell_Score')
+        mdf1 = day_df.dropna(subset=['Buy_Score'])
+        mdf2 = day_df.dropna(subset=['Sell_Score'])   
+        top_n = round(n*len(list(mdf1['Short_Ticker'])))
+        bottom_k = round(k*len(list(mdf2['Short_Ticker'])))     
+        top_df = mdf1.nlargest(top_n, 'Buy_Score')
+        bottom_df = mdf2.nlargest(bottom_k, 'Sell_Score')
         if top_df['Buy_Score'].sum() == 0:
             top_df['Percent'] = 0
             doubt_list = []
@@ -168,19 +167,17 @@ def train_process(df,sentiment_df,s_sum,n,k):
             current,portfolio = sell(bottom_df,day_df,portfolio,current,'YES',doubt_list)
         else:
             current,portfolio = sell(bottom_df,day_df,portfolio,current,doubt_list)
-            if current <=0:
+            if current+get_portfolio_value(day_df,portfolio) <=0:
                 profit = -100
                 return [None,None,None]
             if current > 1:
                 current,portfolio = buy(top_df,portfolio,current,doubt_list)
     profit = 100*(current - s_sum)/s_sum
-    #print(day)
-    print(profit)
     if profit >0:
         return [n, k,coefs]
     else:
         return [None,None,None]
-
+        
 #Single Process model    
 # def train_model(train,sentiment_df,s_sum):
 #     n_list=[]
@@ -246,6 +243,8 @@ def train_coefs(train):
                 dchange2.append(float(train[train['Short_Ticker']==ticker]['Daily Change']))
     if not dchange1 and not dchange2:
         return [0.5,0.5]   
+    if not dchange1 and not dchange2:
+            return [0.5,0.5]
     try:
         S_I = scipy.stats.pearsonr(dchange1,sell_ind)[1]
         nVol = scipy.stats.pearsonr(dchange2,vol_list)[1]
@@ -253,8 +252,6 @@ def train_coefs(train):
         return[0.5,0.5]
     coefs.extend([S_I,nVol])
     return coefs
-
-
 
 #Calculating weighted scores (according to coefficients)
 def weighted_score(df,sentiment_df,day,coefs):
