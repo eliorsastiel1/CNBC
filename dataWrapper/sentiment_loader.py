@@ -14,11 +14,12 @@ def get_sentiment_data():
         for index,row in tqdm(sentiment.iterrows(),total=sentiment.shape[0]):
             if index[1] not in cummulative:
                 cummulative[index[1]]=[]
-                cummulative[index[1]].append(row['Negative Count']+row['Positive Count'])
-                cummulativeAvg.append(mean(cummulative[index[1]]))
-                sentiment['Weight']=cummulativeAvg               
-                sentiment.to_pickle(processed_file_name)
+            cummulative[index[1]].append(row['Negative Count']+row['Positive Count'])
+            cummulativeAvg.append(mean(cummulative[index[1]]))
+        sentiment['Weight']=cummulativeAvg               
+        sentiment.to_pickle(processed_file_name)
     else:
         sentiment=pd.read_pickle('./Processed/sentiment_weighted.pkl')
     sentiment['Sentiment Score'] = (sentiment['Positive Score']-sentiment['Negative Score'])/(sentiment['Weight'])
+    #sentiment['Sentiment Score'] = (sentiment['Positive Score']-sentiment['Negative Score'])/(sentiment['Positive Score']-sentiment['Negative Score']+1)
     return sentiment

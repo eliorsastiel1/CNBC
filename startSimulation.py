@@ -6,7 +6,7 @@ import os
 import pickle
 from dataWrapper.sentiment_loader import get_sentiment_data
 import multiprocessing
-from tradeSimulatorV10 import train_process,simulator
+from tradeSimulatorV15 import train_process,simulator
 import concurrent.futures
 import numpy as np
 
@@ -17,7 +17,10 @@ if __name__ == '__main__':
     simulator_params2 =  os.path.join(os.path.dirname(__file__), 'Data/simulator_params2.pkl')
 
     sentiment=get_sentiment_data()
-    train=pd.read_pickle('./Data/train.pkl')
+    
+
+    
+
     isum=1000000
     split_date = '2007-02-02'
     #if not os.path.isfile(simulation_training_data):
@@ -33,14 +36,20 @@ if __name__ == '__main__':
     #            test2 = pickle.load(in_file)  
 
     if not os.path.isfile(simulator_params):
+        train=pd.read_pickle('./Data/train.pkl')
+        #unwanted=train[train['Adj Close']<0]
+        #unwanted=np.unique(unwanted['Short_Ticker'])
+        #train = train[~train['Short_Ticker'].isin(unwanted)]
+
         n_list = []
         k_list = []
         t_coefs = []
+        current_list=[]
         #frames=[]
         num_processes = multiprocessing.cpu_count()-1
         #num_processes =1
         with concurrent.futures.ProcessPoolExecutor(max_workers=num_processes) as executor:
-            futures = [executor.submit(train_process,train,sentiment,1000000,x,y) for x in np.arange(0.01, 0.21, 0.01) for y in np.arange(0.01,0.04,0.01)]
+            futures = [executor.submit(train_process,train,sentiment,1000000,x,y) for x in np.arange(0.01, 0.21, 0.01) for y in np.arange(0.01,0.21,0.01)]
             #futures = [executor.submit(train_process,train,sentiment,isum,x) for x in np.arange(0.01, 0.11, 0.01)]
             for future in tqdm(concurrent.futures.as_completed(futures),total=len(futures)):
                 #print(future.result())
@@ -50,42 +59,56 @@ if __name__ == '__main__':
                 if future.result()[0] is not None:
                     n_list.append(future.result()[0])
                     k_list.append(future.result()[1])
-                    #t_coefs.append(future.result()[2])      
-            final_n = np.mean(n_list)
-            final_k = np.mean(k_list)    
+                    t_coefs.extend(future.result()[2])   
+                    current_list.append(future.result()[3])    
+            #final_n = np.mean(n_list)
+            #final_k = np.mean(k_list)    
             #debug_output = pd.concat(frames)
             #debug_output.to_pickle('Data/debug.pkl')
-            #final_n = np.median(n_list)
-            #final_k = np.median(k_list)
-            #f_coefs = []
+            final_n = np.median(n_list)
+            final_k = np.median(k_list)
+            f_coefs = []
             #S_I =  np.nanmean([x[0] for x in t_coefs])
             #nVol1 =  np.nanmean([x[1] for x in t_coefs])
+            try:
+                B_I =  np.nanmean([x[0] for x in t_coefs])
+                SA1 =  np.nanmean([x[1] for x in t_coefs])     
+                nVol1 = np.nanmean([x[2] for x in t_coefs])
+                S_I = np.nanmean([x[3] for x in t_coefs])
+                f_coefs.extend([B_I,SA1, nVol1,S_I])
             #f_coefs.extend([S_I,nVol1])
             #return final_n, f_coefs
         #n, coefs =train_model(train,sentiment,isum)
-            with open(simulator_params, 'wb') as out_file:
-                pickle.dump(final_n,out_file, protocol=-1)
-                pickle.dump(final_k,out_file, protocol=-1)
-                #pickle.dump(f_coefs,out_file, protocol=-1)
+                with open(simulator_params, 'wb') as out_file:
+                    pickle.dump(final_n,out_file, protocol=-1)
+                    pickle.dump(final_k,out_file, protocol=-1)
+                    pickle.dump(f_coefs,out_file, protocol=-1)
+                n=final_n
+                k=final_k
+                coefs=f_coefs
+            except:
+                print("Error saving coeff")
             with open(simulator_params2, 'wb') as out_file:
                 pickle.dump(n_list,out_file, protocol=-1)
                 pickle.dump(k_list,out_file, protocol=-1)
-                #pickle.dump(t_coefs,out_file, protocol=-1)
-            n=final_n
-            k=final_k
-            #coefs=f_coefs
+                pickle.dump(t_coefs,out_file, protocol=-1)
+                pickle.dump(current_list,out_file, protocol=-1)
+            
     else:
         test=pd.read_pickle('./Data/test.pkl')
+        #unwanted=test[test['Adj Close']<0]
+        #unwanted=np.unique(unwanted['Short_Ticker'])
+        #test = test[~test['Short_Ticker'].isin(unwanted)]
         simulation_result =  os.path.join(os.path.dirname(__file__), 'Data/simulation_result.pkl')
 
         with open(simulator_params, 'rb') as in_file: 
             n = pickle.load(in_file)
             k = pickle.load(in_file)
-            #coefs = pickle.load(in_file) 
+            coefs = pickle.load(in_file) 
             print(n)
             print(k)
-        #profit=simulator(test,sentiment,n,k,coefs,1000000)
-        profit=simulator(test,sentiment,n,k,1000000)
+        profit=simulator(test,sentiment,n,k,coefs,1000000)
+        #profit=simulator(test,sentiment,n,k,1000000)
         with open(simulation_result, 'wb') as out_file:
             pickle.dump(profit,out_file, protocol=-1)
         print(profit)

@@ -54,14 +54,24 @@ def simulator(df,sentiment_df,n,k,s_sum):
         bottom_k = round(k*len(list(mdf2['Short_Ticker'])))     
         top_df = mdf1.nlargest(top_n, 'Buy_Score')
         bottom_df = mdf2.nlargest(bottom_k, 'Sell_Score')
-        if top_df['Buy_Score'].sum() == 0:
+        if len(top_df['Buy_Score']) == 0:
             top_df['Percent'] = 0
             doubt_list = []
         else:
+            pos_buys = [x for x in top_df['Buy_Score'] if x>0]
+            pos_sums = sum(pos_buys)
             top_df['Percent'] = [
-                round(float(x/(top_df['Buy_Score'].sum())),2) if x>0 and top_df['Buy_Score'].sum()>0 
-                else 0 for x in top_df['Buy_Score']]            
+                round(float(x/(pos_sums)),2) if x>0 and top_df['Buy_Score'].max()>0 
+                else 0 for x in top_df['Buy_Score']]
             doubt_list = [ticker for ticker in list(top_df['Short_Ticker']) if ticker in list(bottom_df['Short_Ticker'])]
+        # if top_df['Buy_Score'].sum() == 0:
+        #     top_df['Percent'] = 0
+        #     doubt_list = []
+        # else:
+        #     top_df['Percent'] = [
+        #         round(float(x/(top_df['Buy_Score'].sum())),2) if x>0 and top_df['Buy_Score'].sum()>0 
+        #         else 0 for x in top_df['Buy_Score']]            
+        #    doubt_list = [ticker for ticker in list(top_df['Short_Ticker']) if ticker in list(bottom_df['Short_Ticker'])]
         if day == first_day:
             current2,portfolio2 = buy(top_df,portfolio,current,doubt_list)
             if np.isnan(current2)==False:
@@ -74,10 +84,10 @@ def simulator(df,sentiment_df,n,k,s_sum):
                 current = current2
                 portfolio = portfolio2
                 final_profit = round(100*(current - s_sum)/s_sum,3)
-                profits_dict[(int(day[:4])-1)] = final_profit
+                profits_dict[(int(day[:4]))] = final_profit
             else:
                 final_profit = round(100*(current - s_sum)/s_sum,3)
-                profits_dict[(int(day[:4])-1)] = final_profit                
+                profits_dict[(int(day[:4]))] = final_profit                
         else:
             current2,portfolio2 = sell(bottom_df,day_df,portfolio,current,doubt_list)
             if np.isnan(current2)==False:
@@ -178,10 +188,9 @@ def train_process(df,sentiment_df,s_sum,n,k):
     days=list(df['Date'].unique())
     first_day = days[0]
     last_day = days[-1]
-    #debugger=[]
     #prev_day = 0
     #current_day = 0
-    for day in days:
+    for day in tqdm(days, position = 0, leave = True):
         day_df = df[df['Date']==day]
         #coefs = train_coefs(day_df)
         #day_df = weighted_score(day_df,sentiment_df,day,coefs)
@@ -192,14 +201,24 @@ def train_process(df,sentiment_df,s_sum,n,k):
         bottom_k = round(k*len(list(mdf2['Short_Ticker'])))     
         top_df = mdf1.nlargest(top_n, 'Buy_Score')
         bottom_df = mdf2.nlargest(bottom_k, 'Sell_Score')
-        if top_df['Buy_Score'].sum() == 0:
+        if len(top_df['Buy_Score']) == 0:
             top_df['Percent'] = 0
             doubt_list = []
         else:
+            pos_buys = [x for x in top_df['Buy_Score'] if x>0]
+            pos_sums = sum(pos_buys)
             top_df['Percent'] = [
-                round(float(x/(top_df['Buy_Score'].sum())),2) if x>0 and top_df['Buy_Score'].sum()>0 
+                round(float(x/(pos_sums)),2) if x>0 and top_df['Buy_Score'].max()>0 
                 else 0 for x in top_df['Buy_Score']]
             doubt_list = [ticker for ticker in list(top_df['Short_Ticker']) if ticker in list(bottom_df['Short_Ticker'])]
+        # if top_df['Buy_Score'].sum() == 0:
+        #     top_df['Percent'] = 0
+        #     doubt_list = []
+        # else:
+        #     top_df['Percent'] = [
+        #         round(float(x/(top_df['Buy_Score'].sum())),2) if x>0 and top_df['Buy_Score'].sum()>0 
+        #         else 0 for x in top_df['Buy_Score']]
+        #     doubt_list = [ticker for ticker in list(top_df['Short_Ticker']) if ticker in list(bottom_df['Short_Ticker'])]
         if day == first_day:
             current2,portfolio2 = buy(top_df,portfolio,current,doubt_list)
             if np.isnan(current2)==False:
@@ -229,14 +248,12 @@ def train_process(df,sentiment_df,s_sum,n,k):
             # elif current_day > prev_day: 
             #     d_coefs.append(coefs)
             # prev_day = current_day
-        #debugger.append({"Day":day,"n":n,"k":k,"Day_Df":day_df,"top_n":top_n,"bottom_k":bottom_k,"Buy Score":top_df['Buy_Score'].sum(),"Percent":top_df['Percent'],"Current":current,"Portfoliio":portfolio,"Current2":current2,"Portfolio2":portfolio2})
-
     print(current)
-    if current/s_sum > 1.9:
+    if current/s_sum > 3:
         #return [n,k,d_coefs]
         return [n,k]
     else:
-        return [None,None]
+        return [None,None,None]
         
 #Single Process model    
 # def train_model(train,sentiment_df,s_sum):
@@ -269,7 +286,7 @@ def train_model(train,sentiment_df,s_sum):
 
         #results = list(tqdm(executor.map(train_process, train), total=len(my_iter)))
 
-            futures = [executor.submit(train_process,train,sentiment_df,x,y) for x in np.arange(0.01, 0.11, 0.01)
+            futures = [executor.submit(train_process,train,sentiment_df,s_sum,x,y) for x in np.arange(0.01, 0.11, 0.01)
             for y in np.arange(0.01,0.11,0.01)]
             for future in tqdm(concurrent.futures.as_completed(futures),total=len(futures)):
                 if future.result()[0] is not None:
@@ -338,15 +355,18 @@ def weighted_score(df,sentiment_df,day):
         #Volume_score = nVol*row['Normalized_Volume']
         if is_sentiment==True:
             if row['Short_Ticker'] in sentiment_df.index:
-                if sentiment_df.loc[row['Short_Ticker']]['Sentiment Score']>0 and sentiment_df["Sentiment Score"].max()>0:
+                if sentiment_df.loc[row['Short_Ticker']]['Sentiment Score']:
+                #if sentiment_df.loc[row['Short_Ticker']]['Sentiment Score']>0 and sentiment_df["Sentiment Score"].max()>0:
                     Sentiment_score = float(
-                        sentiment_df.loc[row['Short_Ticker']]['Sentiment Score']/sentiment_df["Sentiment Score"].max())
+                        sentiment_df.loc[row['Short_Ticker']]['Sentiment Score'])
+                    # Sentiment_score = float(
+                    #     sentiment_df.loc[row['Short_Ticker']]['Sentiment Score']/sentiment_df["Sentiment Score"].max())
                 else:
-                    Sentiment_score = 0
+                    Sentiment_score = np.nan
             else:
-                Sentiment_score = 0
+                Sentiment_score = np.nan
         else:
-            Sentiment_score = 0
+            Sentiment_score = np.nan
         #sell_scores.append(Sell_score+Volume_score)
         sell_scores.append(Sell_score)
         buy_scores.append(Sentiment_score)          
