@@ -15,6 +15,7 @@ russel_stocks=load_russel3000()
 stocks_file =  os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Data/stocks_filtered.pkl')
 pre_downloaded_stocks=pd.read_pickle(stocks_file)
 
+
 first_day = list(pre_downloaded_stocks['Date'].unique())[0]
 last_day = list(pre_downloaded_stocks['Date'].unique())[-1]
 first_day=datetime.strptime(first_day, "%Y-%m-%d")

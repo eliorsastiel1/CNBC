@@ -6,7 +6,7 @@ from datetime import datetime
 
 raw_file_name =  os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Data/cnbc_news.json')
 parsed_file_name =  os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Data/cnbc_news.pickle')
-
+preloaded_file=None
 def flatten_data(data):
     flattened=[]
     for year in data:
@@ -25,6 +25,7 @@ def flatten_data(data):
     return df
 
 def get_cnbc_data():
+    global preloaded_file
     if not os.path.isfile(parsed_file_name):
         print('Parsed data unavailable, parsing JSON file')
         with open(raw_file_name, encoding="utf8") as f:
@@ -34,7 +35,17 @@ def get_cnbc_data():
                 pickle.dump(cnbc_data,out_file, protocol=-1)
     else:
         print('Reading Parsed Data')
+        if(preloaded_file is not None):
+            print('preloaded file')
+            return preloaded_file
         with open(parsed_file_name, 'rb') as in_file: 
             cnbc_data = pickle.load(in_file)
+            preloaded_file=cnbc_data
     #print(cnbc_data.tail())
     return cnbc_data
+
+def get_cnbc_data_with_sentiment():
+    df= pd.read_pickle(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Data/sentiment_data.pkl'))
+    df['Publish Date'] = df["PubDate"].dt.strftime("%Y-%m-%d")
+    return df
+    

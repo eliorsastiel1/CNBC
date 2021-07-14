@@ -7,7 +7,7 @@ import yfinance as yf
 current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir) 
-from NER import ner
+from helpers.NER import ner
 
 data_file_name =  os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Data/russel3000.pickle')
 source_file_name =  os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Data/russel3000.csv')

@@ -3,6 +3,7 @@ import os
 from data_wrapper.get_stocks_data import get_stock_data
 from data_wrapper.sentiment_loader import get_sentiment_for_day
 from trader_helper_functions import weighted_score,buy,get_portfolio_value,sell
+
 import numpy as np
 
 n=0.01#buy percentage
@@ -15,10 +16,18 @@ profits_dict={}
 
 def get_portfolio():
     global portfolio
-    return pd.DataFrame.from_dict(portfolio,orient='index')
+    df=pd.DataFrame.from_dict(portfolio,orient='index')
+    if(df.empty):
+        return df
+    df=df[df[df.columns[1]]!=0]
+    return df
 
 def get_current():
     global current
+    return current
+def add_to_current(val):
+    global current
+    current=current+val
     return current
 
 def get_portfolio_val(day):
@@ -59,10 +68,10 @@ def get_recommendations(day):
     #return top_df,portfolio,current,doubt_list
 
 
-def buy_action(top_df):
+def buy_action(top_df,day):
     global portfolio
     global current
-    current2,portfolio2 = buy(top_df,portfolio,current,[])
+    current2,portfolio2 = buy(top_df,portfolio,current,[],day)
     print(portfolio2)
     if np.isnan(current2)==False:
         current = current2
@@ -73,7 +82,7 @@ def sell_action(bottom_df,day):
     global current
     stocks=get_stock_data(day)
     df = stocks.copy(deep=True)
-    current2,portfolio2 = sell(bottom_df,df,portfolio,current,[])
+    current2,portfolio2 = sell(bottom_df,df,portfolio,current,[],day)
     if np.isnan(current2)==False:
         current = current2
         portfolio = portfolio2

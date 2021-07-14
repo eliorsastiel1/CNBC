@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from datetime import datetime
 #Measuring portfolio value
 def get_portfolio_value(df,portfolio):
     portfolio_value = 0
@@ -21,7 +22,7 @@ def get_portfolio_value(df,portfolio):
 
 
 #Buying function
-def buy(top_df,portfolio,current,doubt_list):
+def buy(top_df,portfolio,current,doubt_list,day):
     base = current
     #if top_df['Buy_Score'].sum()!=0:
     if top_df['Score'].sum()!=0:
@@ -32,7 +33,7 @@ def buy(top_df,portfolio,current,doubt_list):
                 if ticker in list(portfolio.keys()):
                     stocks = float(portfolio.get(ticker)[0])
                 else:
-                    portfolio[ticker] = [0,0]
+                    portfolio[ticker] = [0,day]
                     stocks = 0
                 invest = float(top_df.loc[top_df['Short_Ticker'] == ticker,\
                                         'Percent'].iloc[0])*base
@@ -51,35 +52,44 @@ def buy(top_df,portfolio,current,doubt_list):
                     else:
                         stocks += round(float(invest/price),2)
                         portfolio[ticker][0] = stocks
-                        portfolio[ticker][1] +=1
+                        #portfolio[ticker][1] +=1
                         current -= stocks*price  
         return current,portfolio
     else:
         return current,portfolio
 
 #Selling function
-def sell(bottom_df,day_df,portfolio,current,doubt_list,indicator='NO'):
+def sell(bottom_df,day_df,portfolio,current,doubt_list,day,indicator='NO'):
     mean_vol = np.nanmean(day_df['Volume'])
     if indicator == 'NO':
         for ticker in list(portfolio.keys()):
             if ticker in doubt_list:
+                print('{} is in doubt list'.format(ticker))
                 continue
             else:
                 if ticker in list(bottom_df['Short_Ticker']):
                     if pd.isnull(portfolio.get(ticker)[0]):
+                        print('dataframe is null')
                         continue
                     else:
                         try:
                             price = 0.996*float(day_df.loc[
                                 day_df['Short_Ticker'] == ticker,'Adj Close'].iloc[0])
                         except Exception:
+                            print(Exception)
                             continue
                         if np.isnan(price)==True:
+                            print('{} price is nan'.format(ticker))
                             continue
                         if price < 0:
+                            print('{} price is negative'.format(ticker))
                             continue
                         else:
-                            if portfolio.get(ticker)[1] < 22:
+                            current_day = datetime.strptime(day, '%Y-%m-%d')
+                            buy_day=datetime.strptime(portfolio.get(ticker)[1], '%Y-%m-%d')
+                            delta = current_day - buy_day
+                            if delta.days < 22:
+                                print('{} not held for 22 days'.format(ticker))
                                 continue
                             else:
                                 ticker_volume = day_df.loc[day_df['Short_Ticker'] == ticker,'Volume'].iloc[0]
@@ -101,8 +111,10 @@ def sell(bottom_df,day_df,portfolio,current,doubt_list,indicator='NO'):
                 price = 0.996*float(day_df.loc[
                             day_df['Short_Ticker'] == ticker,'Adj Close'].iloc[0])
             except Exception:
+                print('{} exception'.format(ticker))
                 continue
             if np.isnan(price)==True:
+                print('{} price is nan 2'.format(ticker))
                 continue
             else:
                 sell = float(portfolio.get(ticker)[0])*price                
